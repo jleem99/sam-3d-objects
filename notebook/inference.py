@@ -2,7 +2,7 @@
 import os
 
 # not ideal to put that here
-os.environ["CUDA_HOME"] = os.environ["CONDA_PREFIX"]
+# os.environ["CUDA_HOME"] = os.environ["CONDA_PREFIX"]
 os.environ["LIDRA_SKIP_INIT"] = "true"
 
 import sys
@@ -16,16 +16,22 @@ import math
 import utils3d
 import shutil
 import subprocess
-import seaborn as sns
 from PIL import Image
 import numpy as np
-import gradio as gr
-import matplotlib.pyplot as plt
 from copy import deepcopy
 from kaolin.visualize import IpyTurntableVisualizer
 from kaolin.render.camera import Camera, CameraExtrinsics, PinholeIntrinsics
 import builtins
 from pytorch3d.transforms import quaternion_multiply, quaternion_invert
+
+# Optional UI/visualization deps; only needed for notebook widgets
+try:
+    import gradio as gr
+except Exception as exc:  # gradio pulls CLI deps such as typer
+    gr = None
+    _gradio_import_error = exc
+else:
+    _gradio_import_error = None
 
 import sam3d_objects  # REMARK(Pierre) : do not remove this import
 from sam3d_objects.pipeline.inference_pipeline_pointmap import InferencePipelinePointMap
@@ -379,6 +385,9 @@ def load_masks(folder_path, indices_list=None, extension=".png"):
 
 
 def display_image(image, masks=None):
+    import seaborn as sns
+    import matplotlib.pyplot as plt
+
     def imshow(image, ax):
         ax.axis("off")
         ax.imshow(image)
@@ -405,6 +414,11 @@ def display_image(image, masks=None):
 
 
 def interactive_visualizer(ply_path):
+    if gr is None:
+        raise RuntimeError(
+            "gradio is required for the interactive visualizer; install gradio (and typer) to enable it."
+        ) from _gradio_import_error
+
     with gr.Blocks() as demo:
         gr.Markdown("# 3D Gaussian Splatting (black-screen loading might take a while)")
         gr.Model3D(
